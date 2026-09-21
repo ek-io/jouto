@@ -1,0 +1,6 @@
+playwright
+pandas
+duckduckgo-search
+google-generativeai
+pyyaml
+streamlit

@@ -1,0 +1,80 @@
+/* Base Styles */
+body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #ffffff;
+    color: #2d2d2d;
+}
+
+/* Hide Streamlit Branding */
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+footer {visibility: hidden;}
+
+/* Adjust top padding since header is gone */
+.block-container {
+    padding-top: 1.5rem;
+    padding-bottom: 0rem;
+    max-width: 1000px;
+}
+
+/* Job Cards (Indeed Style) */
+.job-card {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    border: 1px solid #d4d2d0;
+    transition: box-shadow 0.2s ease, border 0.2s ease;
+}
+
+.job-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-color: #949494;
+}
+
+.job-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2557a7;
+    margin-bottom: 4px;
+    cursor: pointer;
+}
+
+.job-title:hover {
+    text-decoration: underline;
+}
+
+.job-company {
+    font-size: 1rem;
+    color: #2d2d2d;
+    margin-bottom: 12px;
+}
+
+.job-snippet {
+    font-size: 0.875rem;
+    color: #595959;
+    line-height: 1.5;
+    margin-top: 12px;
+}
+
+.job-snippet ul {
+    margin-top: 4px;
+    padding-left: 20px;
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background-color: #e8f3fb;
+    color: #2557a7;
+    border: 1px solid #d0e7f7;
+}
+
+.badge-green { background-color: #e5f6e5; color: #1e5a22; border-color: #c2eac3; }
+.badge-yellow { background-color: #fff9e6; color: #855800; border-color: #ffe699; }
+.badge-red { background-color: #fde8e8; color: #991b1b; border-color: #fbd5d5; }
