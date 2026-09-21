@@ -7,8 +7,12 @@ def get_config_path():
     return os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "config.yaml")
 
 def load_config():
-    with open(get_config_path(), "r") as f:
-        return yaml.safe_load(f)
+    config_path = get_config_path()
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    if not os.path.exists(config_path):
+        return {"personal_details": {}, "target_titles": [], "work_history": [], "education": [], "skills": [], "resume_path": ""}
+    with open(config_path, "r") as f:
+        return yaml.safe_load(f) or {}
 
 def get_model():
     api_key = os.environ.get("GEMINI_API_KEY")
