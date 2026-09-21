@@ -38,8 +38,11 @@ Welcome to **AutoApply Agent V2**, your automated job search assistant.
 Please configure your **Gemini API Key** in the sidebar to enable AI features!
 """)
 
-api_key = st.sidebar.text_input("Gemini API Key", type="password")
-if api_key:
-    os.environ["GEMINI_API_KEY"] = api_key
+if "GEMINI_API_KEY" in os.environ:
+    st.sidebar.success("✅ AI Engine Active (API Key configured securely)")
 else:
-    st.sidebar.warning("API Key missing. AI Evaluation disabled.")
+    api_key = st.sidebar.text_input("Gemini API Key (Admin)", type="password")
+    if api_key:
+        os.environ["GEMINI_API_KEY"] = api_key
+    else:
+        st.sidebar.warning("API Key missing. AI features disabled.")
