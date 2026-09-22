@@ -1,33 +1,38 @@
-import sqlite3
 import os
 import json
 import hashlib
-
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "saas.db")
+import psycopg2
+import psycopg2.extras
 
 def get_connection():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        print("WARNING: DATABASE_URL not set!")
+        # Fallback for local testing if needed, though it will crash without DB
+        return None
+    
+    conn = psycopg2.connect(db_url)
     return conn
 
 def initialize_db():
     conn = get_connection()
+    if not conn: return
     c = conn.cursor()
-    # Users Table
+    # Users Table (Now with resume_file as BYTEA)
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             profile_data TEXT,
-            resume_path TEXT
+            resume_name TEXT,
+            resume_file BYTEA
         )
     ''')
     # Global Jobs Table
     c.execute('''
         CREATE TABLE IF NOT EXISTS jobs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             title TEXT NOT NULL,
             company TEXT,
             url TEXT UNIQUE NOT NULL,
@@ -39,7 +44,7 @@ def initialize_db():
     # User-Job Mapping Table
     c.execute('''
         CREATE TABLE IF NOT EXISTS user_jobs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             user_id INTEGER,
             job_id INTEGER,
             status TEXT DEFAULT 'Saved',
@@ -62,40 +67,42 @@ def create_user(username, password):
     conn = get_connection()
     c = conn.cursor()
     try:
-        c.execute("INSERT INTO users (username, password_hash, profile_data) VALUES (?, ?, ?)", 
+        c.execute("INSERT INTO users (username, password_hash, profile_data) VALUES (%s, %s, %s)", 
                   (username, hash_password(password), json.dumps({"personal_details": {}, "target_titles": [], "skills": []})))
         conn.commit()
         return True
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
+        conn.rollback()
         return False
     finally:
         conn.close()
 
 def verify_user(username, password):
     conn = get_connection()
-    c = conn.cursor()
-    c.execute("SELECT id FROM users WHERE username = ? AND password_hash = ?", (username, hash_password(password)))
+    c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    c.execute("SELECT id FROM users WHERE username = %s AND password_hash = %s", (username, hash_password(password)))
     user = c.fetchone()
     conn.close()
     return user['id'] if user else None
 
 def get_user_profile(user_id):
     conn = get_connection()
-    c = conn.cursor()
-    c.execute("SELECT profile_data, resume_path FROM users WHERE id = ?", (user_id,))
+    c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    c.execute("SELECT profile_data, resume_name, resume_file FROM users WHERE id = %s", (user_id,))
     row = c.fetchone()
     conn.close()
     if row:
-        return json.loads(row['profile_data'] or "{}"), row['resume_path']
-    return {}, None
+        return json.loads(row['profile_data'] or "{}"), row['resume_name'], row['resume_file']
+    return {}, None, None
 
-def update_user_profile(user_id, profile_data, resume_path=None):
+def update_user_profile(user_id, profile_data, resume_name=None, resume_bytes=None):
     conn = get_connection()
     c = conn.cursor()
-    if resume_path is not None:
-        c.execute("UPDATE users SET profile_data = ?, resume_path = ? WHERE id = ?", (json.dumps(profile_data), resume_path, user_id))
+    if resume_bytes is not None:
+        c.execute("UPDATE users SET profile_data = %s, resume_name = %s, resume_file = %s WHERE id = %s", 
+                  (json.dumps(profile_data), resume_name, psycopg2.Binary(resume_bytes), user_id))
     else:
-        c.execute("UPDATE users SET profile_data = ? WHERE id = ?", (json.dumps(profile_data), user_id))
+        c.execute("UPDATE users SET profile_data = %s WHERE id = %s", (json.dumps(profile_data), user_id))
     conn.commit()
     conn.close()
 
@@ -104,18 +111,19 @@ def add_global_job(title, url, company="Unknown", snippet="", source="Manual"):
     conn = get_connection()
     c = conn.cursor()
     try:
-        c.execute("INSERT INTO jobs (title, company, url, snippet, source) VALUES (?, ?, ?, ?, ?)", 
+        c.execute("INSERT INTO jobs (title, company, url, snippet, source) VALUES (%s, %s, %s, %s, %s)", 
                   (title, company, url, snippet, source))
         conn.commit()
-    except sqlite3.IntegrityError:
-        pass # Job already exists in global pool
+    except psycopg2.IntegrityError:
+        conn.rollback()
+        pass # Job already exists
     finally:
         conn.close()
 
 def get_global_jobs(limit=100):
     conn = get_connection()
-    c = conn.cursor()
-    c.execute("SELECT * FROM jobs ORDER BY discovered_date DESC LIMIT ?", (limit,))
+    c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    c.execute("SELECT * FROM jobs ORDER BY discovered_date DESC LIMIT %s", (limit,))
     jobs = [dict(row) for row in c.fetchall()]
     conn.close()
     return jobs
@@ -125,11 +133,12 @@ def save_job_for_user(user_id, job_id, fit_score=0, reasoning=""):
     c = conn.cursor()
     try:
         c.execute('''INSERT INTO user_jobs (user_id, job_id, status, fit_score, reasoning) 
-                     VALUES (?, ?, 'Saved', ?, ?)''', (user_id, job_id, fit_score, reasoning))
+                     VALUES (%s, %s, 'Saved', %s, %s)''', (user_id, job_id, fit_score, reasoning))
         conn.commit()
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
+        conn.rollback()
         # Update if already exists
-        c.execute("UPDATE user_jobs SET fit_score = ?, reasoning = ? WHERE user_id = ? AND job_id = ?", 
+        c.execute("UPDATE user_jobs SET fit_score = %s, reasoning = %s WHERE user_id = %s AND job_id = %s", 
                   (fit_score, reasoning, user_id, job_id))
         conn.commit()
     finally:
@@ -137,12 +146,12 @@ def save_job_for_user(user_id, job_id, fit_score=0, reasoning=""):
 
 def get_user_applications(user_id):
     conn = get_connection()
-    c = conn.cursor()
+    c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     c.execute('''
         SELECT uj.id as uj_id, uj.status, uj.fit_score, uj.reasoning, uj.applied_date, j.* 
         FROM user_jobs uj 
         JOIN jobs j ON uj.job_id = j.id 
-        WHERE uj.user_id = ?
+        WHERE uj.user_id = %s
         ORDER BY uj.id DESC
     ''', (user_id,))
     apps = [dict(row) for row in c.fetchall()]
@@ -153,8 +162,8 @@ def update_user_job_status(uj_id, status):
     conn = get_connection()
     c = conn.cursor()
     if status == "Applied":
-        c.execute("UPDATE user_jobs SET status = ?, applied_date = CURRENT_TIMESTAMP WHERE id = ?", (status, uj_id))
+        c.execute("UPDATE user_jobs SET status = %s, applied_date = CURRENT_TIMESTAMP WHERE id = %s", (status, uj_id))
     else:
-        c.execute("UPDATE user_jobs SET status = ? WHERE id = ?", (status, uj_id))
+        c.execute("UPDATE user_jobs SET status = %s WHERE id = %s", (status, uj_id))
     conn.commit()
     conn.close()

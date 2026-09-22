@@ -40,12 +40,19 @@ def apply_to_job(job_url, user_profile, bulk_mode=False):
             except: pass
             
             try:
-                resume_path = config.get("resume_path", "")
-                if resume_path and os.path.exists(resume_path):
-                    page.set_input_files("input[type='file']", resume_path, timeout=3000)
-                    print("Uploaded resume.")
-            except:
-                print("Could not find resume upload field or resume file missing.")
+                resume_bytes = config.get('resume_file')
+                resume_name = config.get('resume_name', 'resume.pdf')
+                if resume_bytes:
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                        tmp.write(resume_bytes)
+                        tmp_path = tmp.name
+                        
+                    page.set_input_files("input[type='file']", tmp_path, timeout=3000)
+                    print("Uploaded resume from cloud.")
+                    os.unlink(tmp_path)
+            except Exception as e:
+                print(f"Could not upload resume: {e}")
                 
             if not bulk_mode:
                 print("Filled basic fields. Pausing for manual review before submission...")

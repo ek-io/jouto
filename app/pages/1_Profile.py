@@ -21,7 +21,7 @@ if os.path.exists(css_path):
 st.title("👤 Applicant Profile")
 st.write("Manage your personal details, skills, and resume. This data powers the AI evaluator and the auto-applier.")
 
-config_data, current_resume = get_user_profile(st.session_state.user_id)
+config_data, current_resume, _ = get_user_profile(st.session_state.user_id)
 if "personal_details" not in config_data:
     config_data["personal_details"] = {}
 
@@ -53,24 +53,19 @@ with col1:
             st.success("Details saved successfully!")
 
 with col2:
-    st.subheader("📄 Resume Upload")
-    st.write("Upload your PDF resume. The auto-applier will use this file when filling out applications.")
+    st.subheader("📄 Resume Upload (Cloud)")
+    st.write("Upload your PDF resume. It will be saved securely in the cloud database.")
     
-    if current_resume and os.path.exists(current_resume):
-        st.success(f"Current Resume: **{os.path.basename(current_resume)}**")
+    if current_resume:
+        st.success(f"Current Resume: **{current_resume}**")
     else:
         st.warning("No resume uploaded yet.")
         
     uploaded_file = st.file_uploader("Upload New Resume", type=["pdf"])
     if uploaded_file is not None:
-        data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
-        save_path = os.path.join(data_dir, f"resume_user_{st.session_state.user_id}.pdf")
-        
-        with open(save_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-            
-        update_user_profile(st.session_state.user_id, config_data, save_path)
-        st.success(f"Resume '{uploaded_file.name}' saved and linked to your profile!")
+        resume_bytes = uploaded_file.getvalue()
+        update_user_profile(st.session_state.user_id, config_data, uploaded_file.name, resume_bytes)
+        st.success(f"Resume '{uploaded_file.name}' saved to the cloud!")
         st.rerun()
 
 st.divider()

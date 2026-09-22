@@ -16,9 +16,10 @@ if "user_id" not in st.session_state or st.session_state.user_id is None:
 st.title("🚀 Application Engine")
 st.write("Automatically fill out job applications using Playwright. Choose between manual review or full bulk mode.")
 
-user_profile, resume_path = get_user_profile(st.session_state.user_id)
-# Ensure resume_path is in the config dict for the applier to use
-user_profile['resume_path'] = resume_path
+user_profile, resume_name, resume_file = get_user_profile(st.session_state.user_id)
+# Ensure resume details are in the config dict for the applier to use
+user_profile['resume_name'] = resume_name
+user_profile['resume_file'] = resume_file
 
 # Single URL Manual Apply
 with st.expander("Manual URL Apply (Safe Mode)"):
