@@ -20,7 +20,21 @@ st.title("🔍 Job Discovery")
 col1, col2 = st.columns([1, 4])
 with col1:
     st.write("### Actions")
-    if st.button("Scrape Jobs", type="primary", use_container_width=True):
+    
+    with st.expander("📥 Bulk URL Importer"):
+        st.write("Paste a list of job URLs (one per line) from external sources.")
+        bulk_urls = st.text_area("Job URLs")
+        if st.button("Import URLs to Database", use_container_width=True):
+            urls = [u.strip() for u in bulk_urls.split('\n') if u.strip().startswith('http')]
+            if urls:
+                for url in urls:
+                    add_application(title="Imported Job", url=url, snippet="Bulk imported URL.", fit_score=0)
+                st.success(f"Imported {len(urls)} jobs to your history!")
+            else:
+                st.error("No valid URLs found.")
+                
+    st.divider()
+    if st.button("Scrape Web Jobs", type="primary", use_container_width=True):
         with st.spinner("Scraping job boards via DuckDuckGo..."):
             config = load_config()
             titles = config.get("target_titles", [])
@@ -39,7 +53,7 @@ with col1:
             with st.spinner("Evaluating fit scores..."):
                 config = load_config()
                 for job in st.session_state.jobs:
-                    if 'fit_score' not in job: # Only evaluate if not done
+                    if 'fit_score' not in job:
                         evaluation = evaluate_job(job['snippet'], job['title'], config)
                         job['fit_score'] = evaluation.get('score', 0)
                         job['reasoning'] = evaluation.get('reasoning', '')

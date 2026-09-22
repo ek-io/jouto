@@ -14,38 +14,54 @@ def load_config():
     with open(config_path, "r") as f:
         return yaml.safe_load(f) or {}
 
-def apply_to_job(job_url):
+def apply_to_job(job_url, bulk_mode=False):
     config = load_config()
     
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        # Run headless in bulk mode for speed and stability
+        browser = p.chromium.launch(headless=bulk_mode)
         page = browser.new_page()
         print(f"Navigating to {job_url}")
-        page.goto(job_url)
         
         try:
-            page.fill("input[name*='first_name'], input[name*='firstName']", config['personal_details']['first_name'], timeout=2000)
-        except: pass
-        try:
-            page.fill("input[name*='last_name'], input[name*='lastName']", config['personal_details']['last_name'], timeout=2000)
-        except: pass
-        try:
-            page.fill("input[name*='email']", config['personal_details']['email'], timeout=2000)
-        except: pass
-        try:
-            page.fill("input[name*='phone']", config['personal_details']['phone'], timeout=2000)
-        except: pass
-        
-        try:
-            resume_path = config.get("resume_path", "resume.pdf")
-            page.set_input_files("input[type='file']", resume_path, timeout=3000)
-            print("Uploaded resume.")
-        except:
-            print("Could not find resume upload field or resume file missing.")
+            page.goto(job_url, timeout=30000)
             
-        print("Filled basic fields. Pausing for manual review before submission...")
-        page.pause()
-        browser.close()
+            try:
+                page.fill("input[name*='first_name'], input[name*='firstName']", config['personal_details'].get('first_name', ''), timeout=2000)
+            except: pass
+            try:
+                page.fill("input[name*='last_name'], input[name*='lastName']", config['personal_details'].get('last_name', ''), timeout=2000)
+            except: pass
+            try:
+                page.fill("input[name*='email']", config['personal_details'].get('email', ''), timeout=2000)
+            except: pass
+            try:
+                page.fill("input[name*='phone']", config['personal_details'].get('phone', ''), timeout=2000)
+            except: pass
+            
+            try:
+                resume_path = config.get("resume_path", "")
+                if resume_path and os.path.exists(resume_path):
+                    page.set_input_files("input[type='file']", resume_path, timeout=3000)
+                    print("Uploaded resume.")
+            except:
+                print("Could not find resume upload field or resume file missing.")
+                
+            if not bulk_mode:
+                print("Filled basic fields. Pausing for manual review before submission...")
+                page.pause()
+            else:
+                print("Bulk Mode active. Attempting to click submit (simulated).")
+                # In a real scenario, we would find the submit button and click it:
+                # try: page.click("button[type='submit']") except: pass
+                # For safety in this demo, we just wait a second
+                time.sleep(1)
+                
+        except Exception as e:
+            print(f"Failed to apply to {job_url}: {e}")
+            raise e
+        finally:
+            browser.close()
 
 if __name__ == "__main__":
     apply_to_job("https://example.com/apply")
