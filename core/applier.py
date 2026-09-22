@@ -14,8 +14,8 @@ def load_config():
     with open(config_path, "r") as f:
         return yaml.safe_load(f) or {}
 
-def apply_to_job(job_url, bulk_mode=False):
-    config = load_config()
+def apply_to_job(job_url, user_profile, bulk_mode=False):
+    config = user_profile
     
     with sync_playwright() as p:
         # Run headless in bulk mode for speed and stability

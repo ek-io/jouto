@@ -1,23 +1,27 @@
 import streamlit as st
-import yaml
+import json
 import sys
 import os
-import shutil
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from core.discovery import load_config, get_config_path
+from core.database import get_user_profile, update_user_profile
 
 st.set_page_config(page_title="Profile Setup", page_icon="👤", layout="wide")
 
+if "user_id" not in st.session_state or st.session_state.user_id is None:
+    st.warning("Please log in on the Dashboard first.")
+    st.stop()
+
 # Load CSS
 css_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "style.css")
-with open(css_path) as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+if os.path.exists(css_path):
+    with open(css_path) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 st.title("👤 Applicant Profile")
 st.write("Manage your personal details, skills, and resume. This data powers the AI evaluator and the auto-applier.")
 
-config_data = load_config()
+config_data, current_resume = get_user_profile(st.session_state.user_id)
 if "personal_details" not in config_data:
     config_data["personal_details"] = {}
 
@@ -45,15 +49,13 @@ with col1:
             config_data['target_titles'] = [t.strip() for t in target_titles.split(",") if t.strip()]
             config_data['skills'] = [s.strip() for s in skills.split(",") if s.strip()]
             
-            with open(get_config_path(), "w") as f:
-                yaml.dump(config_data, f)
+            update_user_profile(st.session_state.user_id, config_data)
             st.success("Details saved successfully!")
 
 with col2:
     st.subheader("📄 Resume Upload")
     st.write("Upload your PDF resume. The auto-applier will use this file when filling out applications.")
     
-    current_resume = config_data.get('resume_path', '')
     if current_resume and os.path.exists(current_resume):
         st.success(f"Current Resume: **{os.path.basename(current_resume)}**")
     else:
@@ -61,32 +63,28 @@ with col2:
         
     uploaded_file = st.file_uploader("Upload New Resume", type=["pdf"])
     if uploaded_file is not None:
-        data_dir = os.path.dirname(get_config_path())
-        save_path = os.path.join(data_dir, uploaded_file.name)
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
+        save_path = os.path.join(data_dir, f"resume_user_{st.session_state.user_id}.pdf")
         
         with open(save_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
             
-        config_data['resume_path'] = save_path
-        with open(get_config_path(), "w") as f:
-            yaml.dump(config_data, f)
-            
+        update_user_profile(st.session_state.user_id, config_data, save_path)
         st.success(f"Resume '{uploaded_file.name}' saved and linked to your profile!")
         st.rerun()
 
 st.divider()
-with st.expander("Advanced Configuration (Raw YAML)"):
+with st.expander("Advanced Configuration (Raw JSON)"):
     st.write("Edit work history and education manually here.")
-    config_yaml_str = yaml.dump(config_data, sort_keys=False)
-    edited_yaml = st.text_area("Master YAML Profile", config_yaml_str, height=400)
+    config_json_str = json.dumps(config_data, indent=2)
+    edited_json = st.text_area("Master JSON Profile", config_json_str, height=400)
     
-    if st.button("Save Raw YAML"):
+    if st.button("Save Raw JSON"):
         try:
-            new_config = yaml.safe_load(edited_yaml)
-            with open(get_config_path(), "w") as f:
-                yaml.dump(new_config, f)
+            new_config = json.loads(edited_json)
+            update_user_profile(st.session_state.user_id, new_config)
             st.success("Raw profile saved successfully!")
             st.rerun()
-        except yaml.YAMLError as e:
-            st.error(f"Invalid YAML format: {e}")
+        except json.JSONDecodeError as e:
+            st.error(f"Invalid JSON format: {e}")
 

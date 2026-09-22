@@ -12,9 +12,10 @@ RUN playwright install chromium
 
 # Copy the rest of the application
 COPY . .
+RUN chmod +x start.sh
 
 # Expose Streamlit port
 EXPOSE 8501
 
 # Command to run the application
-CMD ["streamlit", "run", "app/Dashboard.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["./start.sh"]

@@ -6,10 +6,10 @@ import pandas as pd
 # Add parent directory to path so we can import core modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.database import initialize_db, get_applications
+from core.database import initialize_db, verify_user, create_user, get_user_applications
 
 st.set_page_config(
-    page_title="AutoApply Dashboard",
+    page_title="AutoApply SaaS",
     page_icon="💼",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -21,10 +21,47 @@ initialize_db()
 # Load Custom CSS
 def load_css():
     css_path = os.path.join(os.path.dirname(__file__), "assets", "style.css")
-    with open(css_path) as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    if os.path.exists(css_path):
+        with open(css_path) as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 load_css()
+
+# --- AUTHENTICATION GATE ---
+if "user_id" not in st.session_state:
+    st.session_state.user_id = None
+
+if st.session_state.user_id is None:
+    st.markdown("<h1 style='text-align: center;'>Welcome to AutoApply SaaS</h1>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        auth_mode = st.radio("Select Action", ["Login", "Sign Up"], horizontal=True)
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        
+        if auth_mode == "Login":
+            if st.button("Log In", use_container_width=True, type="primary"):
+                uid = verify_user(username, password)
+                if uid:
+                    st.session_state.user_id = uid
+                    st.session_state.username = username
+                    st.rerun()
+                else:
+                    st.error("Invalid username or password.")
+        else:
+            if st.button("Create Account", use_container_width=True, type="primary"):
+                if create_user(username, password):
+                    st.success("Account created! Please log in.")
+                else:
+                    st.error("Username already exists.")
+    st.stop() # Halt rendering until logged in
+
+# --- AUTHENTICATED DASHBOARD ---
+st.sidebar.markdown(f"**Welcome, {st.session_state.username}**")
+if st.sidebar.button("Log Out"):
+    st.session_state.user_id = None
+    st.rerun()
 
 # API Key Config (Hidden in sidebar)
 if "GEMINI_API_KEY" in os.environ:
@@ -48,7 +85,7 @@ st.markdown("""
 
 # --- METRICS DASHBOARD ---
 st.write("### 📈 Pipeline Overview")
-apps = get_applications()
+apps = get_user_applications(st.session_state.user_id)
 
 total_saved = len([a for a in apps if a['status'] == 'Saved'])
 total_applied = len([a for a in apps if a['status'] == 'Applied'])
@@ -72,20 +109,11 @@ st.write("### 🕒 Recent Activity")
 if not apps:
     st.info("Your pipeline is empty. Head over to the **Discovery** tab to find new roles!")
 else:
-    # Display the 5 most recent jobs in a clean table
     recent_apps = apps[:5]
     df = pd.DataFrame(recent_apps)
     
-    # Format the dataframe for display
-    display_df = df[['title', 'status', 'fit_score', 'applied_date']].copy()
-    display_df.columns = ['Job Title', 'Status', 'Fit Score', 'Date Added']
+    display_df = df[['title', 'company', 'status', 'fit_score']].copy()
+    display_df.columns = ['Job Title', 'Company', 'Status', 'Fit Score']
     
-    # Remove time from date
-    display_df['Date Added'] = display_df['Date Added'].apply(lambda x: x[:10])
-    
-    st.dataframe(
-        display_df,
-        use_container_width=True,
-        hide_index=True
-    )
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
 
