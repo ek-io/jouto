@@ -6,12 +6,15 @@ import time
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from core.applier import apply_to_job
 from core.database import get_user_applications, update_user_job_status, get_user_profile
+from app.components.navbar import render_navbar
 
-st.set_page_config(page_title="Auto Apply", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="Jouto | Auto Apply", page_icon="🚀", layout="wide", initial_sidebar_state="collapsed")
 
 if "user_id" not in st.session_state or st.session_state.user_id is None:
     st.warning("Please log in on the Dashboard first.")
     st.stop()
+    
+render_navbar()
 
 st.title("🚀 Application Engine")
 st.write("Automatically fill out job applications using Playwright. Choose between manual review or full bulk mode.")

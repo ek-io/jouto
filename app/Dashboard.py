@@ -7,12 +7,13 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.database import initialize_db, verify_user, create_user, get_user_applications
+from app.components.navbar import render_navbar
 
 st.set_page_config(
-    page_title="AutoApply SaaS",
+    page_title="Jouto | Dashboard",
     page_icon="💼",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # Initialize database
@@ -32,7 +33,8 @@ if "user_id" not in st.session_state:
     st.session_state.user_id = None
 
 if st.session_state.user_id is None:
-    st.markdown("<h1 style='text-align: center;'>Welcome to AutoApply SaaS</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #2557a7;'>Jouto</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center;'>Your Job Search, Automated.</h3>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -58,24 +60,19 @@ if st.session_state.user_id is None:
     st.stop() # Halt rendering until logged in
 
 # --- AUTHENTICATED DASHBOARD ---
-st.sidebar.markdown(f"**Welcome, {st.session_state.username}**")
-if st.sidebar.button("Log Out"):
-    st.session_state.user_id = None
-    st.rerun()
+render_navbar()
 
-# API Key Config (Hidden in sidebar)
-if "GEMINI_API_KEY" in os.environ:
-    st.sidebar.success("✅ AI Engine Active")
-else:
-    api_key = st.sidebar.text_input("Gemini API Key (Admin)", type="password")
-    if api_key:
-        os.environ["GEMINI_API_KEY"] = api_key
-    else:
-        st.sidebar.warning("API Key missing. AI features disabled.")
+c1, c2 = st.columns([4, 1])
+with c1:
+    st.write(f"### Welcome back, {st.session_state.username}!")
+with c2:
+    if st.button("Log Out", use_container_width=True):
+        st.session_state.user_id = None
+        st.rerun()
 
 # --- HERO SECTION ---
 st.markdown("""
-<div style="padding: 2rem 0; text-align: center;">
+<div style="padding: 1rem 0; text-align: center;">
     <h1 style="color: #2557a7; font-size: 2.8rem; font-weight: 800; margin-bottom: 0;">Job Application Command Center</h1>
     <p style="color: #595959; font-size: 1.2rem; max-width: 600px; margin: 10px auto 30px auto;">
         Automate your job search, evaluate fit scores with AI, and track your pipeline all in one place.

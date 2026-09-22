@@ -5,12 +5,15 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from core.database import get_user_profile, update_user_profile
+from app.components.navbar import render_navbar
 
-st.set_page_config(page_title="Profile Setup", page_icon="👤", layout="wide")
+st.set_page_config(page_title="Jouto | Profile", page_icon="👤", layout="wide", initial_sidebar_state="collapsed")
 
 if "user_id" not in st.session_state or st.session_state.user_id is None:
     st.warning("Please log in on the Dashboard first.")
     st.stop()
+
+render_navbar()
 
 # Load CSS
 css_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "style.css")
