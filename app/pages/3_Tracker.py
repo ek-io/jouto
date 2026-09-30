@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from core.database import get_user_applications, update_user_job_status
 
-st.set_page_config(page_title="Jouto | Settings", page_icon="⚙️", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Jouto | Tracker", page_icon="📋", layout="wide", initial_sidebar_state="expanded")
 
 if "user_id" not in st.session_state or st.session_state.user_id is None:
     st.warning("Please log in on the Dashboard first.")
@@ -18,8 +18,8 @@ if os.path.exists(css_path):
     with open(css_path) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-st.title("⚙️ Settings & History")
-st.write("Track the status of all your saved and submitted applications.")
+st.title("📋 Application Tracker")
+st.write("Track the companies you have applied to, manage interviews, and monitor your progress.")
 
 apps = get_user_applications(st.session_state.user_id)
 
