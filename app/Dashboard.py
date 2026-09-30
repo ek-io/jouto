@@ -33,11 +33,10 @@ load_css()
 
 import extra_streamlit_components as stx
 
-@st.cache_resource(experimental_allow_widgets=True)
-def get_manager():
-    return stx.CookieManager()
+if "cookie_manager" not in st.session_state:
+    st.session_state.cookie_manager = stx.CookieManager()
 
-cookie_manager = get_manager()
+cookie_manager = st.session_state.cookie_manager
 
 # --- AUTHENTICATION GATE ---
 if "user_id" not in st.session_state:
