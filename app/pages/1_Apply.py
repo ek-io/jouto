@@ -1,4 +1,5 @@
 import streamlit as st
+from PIL import Image
 import os
 import sys
 import time
@@ -9,7 +10,7 @@ from core.database import get_user_profile, search_global_jobs, save_user_job, u
 from core.evaluator import evaluate_job
 from core.applier import apply_to_job
 
-st.set_page_config(page_title="Jouto | Bulk Apply", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="Jouto | Bulk Apply", page_icon=Image.open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if 'pages' in __file__ else os.path.dirname(os.path.abspath(__file__)), 'assets', 'logo.jpg')), layout="wide")
 
 def load_css():
     css_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "style.css")

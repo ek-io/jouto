@@ -1,11 +1,12 @@
 import streamlit as st
+from PIL import Image
 import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 # from core.database import (If we need any settings db calls later)
 
-st.set_page_config(page_title="Jouto | Settings", page_icon="⚙️", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Jouto | Settings", page_icon=Image.open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if 'pages' in __file__ else os.path.dirname(os.path.abspath(__file__)), 'assets', 'logo.jpg')), layout="wide", initial_sidebar_state="expanded")
 
 if "user_id" not in st.session_state or st.session_state.user_id is None:
     st.warning("Please log in on the Dashboard first.")

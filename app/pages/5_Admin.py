@@ -1,4 +1,5 @@
 import streamlit as st
+from PIL import Image
 import pandas as pd
 import sys
 import os
@@ -8,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from core.database import get_global_jobs, get_connection
 import psycopg2.extras
 
-st.set_page_config(page_title="Jouto | Admin", page_icon="🔐", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Jouto | Admin", page_icon=Image.open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if 'pages' in __file__ else os.path.dirname(os.path.abspath(__file__)), 'assets', 'logo.jpg')), layout="wide", initial_sidebar_state="expanded")
 
 # --- ADMIN SECURITY CHECK ---
 if "user_id" not in st.session_state or st.session_state.user_id is None:

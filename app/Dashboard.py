@@ -1,4 +1,5 @@
 import streamlit as st
+from PIL import Image
 import os
 import sys
 import pandas as pd
@@ -10,7 +11,7 @@ from core.database import initialize_db, verify_user, create_user, get_user_appl
 
 st.set_page_config(
     page_title="Jouto | Dashboard",
-    page_icon="💼",
+    page_icon=Image.open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if 'pages' in __file__ else os.path.dirname(os.path.abspath(__file__)), 'assets', 'logo.jpg')),
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -27,9 +28,26 @@ def load_css():
 
 load_css()
 
+import extra_streamlit_components as stx
+
+@st.cache_resource
+def get_manager():
+    return stx.CookieManager()
+
+cookie_manager = get_manager()
+
 # --- AUTHENTICATION GATE ---
 if "user_id" not in st.session_state:
     st.session_state.user_id = None
+
+# Check cookie on hard refresh
+stored_uid = cookie_manager.get(cookie="jouto_user_id")
+stored_uname = cookie_manager.get(cookie="jouto_username")
+
+if stored_uid and stored_uname and st.session_state.user_id is None:
+    st.session_state.user_id = int(stored_uid)
+    st.session_state.username = stored_uname
+    st.rerun()
 
 if st.session_state.user_id is None:
     st.markdown("<h1 style='text-align: center; color: #2557a7;'>Jouto</h1>", unsafe_allow_html=True)
@@ -47,6 +65,9 @@ if st.session_state.user_id is None:
                 if uid:
                     st.session_state.user_id = uid
                     st.session_state.username = username
+                    # Set cookie for 30 days
+                    cookie_manager.set("jouto_user_id", str(uid), key="set_uid")
+                    cookie_manager.set("jouto_username", username, key="set_uname")
                     st.rerun()
                 else:
                     st.error("Invalid username or password.")
@@ -66,6 +87,8 @@ with c1:
 with c2:
     if st.button("Log Out", use_container_width=True):
         st.session_state.user_id = None
+        cookie_manager.delete("jouto_user_id")
+        cookie_manager.delete("jouto_username")
         st.rerun()
 
 # --- HERO SECTION ---

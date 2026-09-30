@@ -6,3 +6,4 @@ pyyaml
 streamlit
 psycopg2-binary
 openpyxl
+extra-streamlit-components
