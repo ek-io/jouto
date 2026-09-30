@@ -30,7 +30,7 @@ load_css()
 
 import extra_streamlit_components as stx
 
-@st.cache_resource
+@st.cache_resource(experimental_allow_widgets=True)
 def get_manager():
     return stx.CookieManager()
 
