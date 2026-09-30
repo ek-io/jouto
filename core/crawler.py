@@ -5,6 +5,15 @@ import xml.etree.ElementTree as ET
 import time
 from database import add_global_job
 
+def is_indian_job(title, company, text):
+    content = (f"{title} {company} {text}").lower()
+    indian_keywords = [
+        "india", "bangalore", "bengaluru", "mumbai", "pune", 
+        "hyderabad", "delhi", "gurgaon", "noida", "chennai", 
+        "ahmedabad", "kolkata"
+    ]
+    return any(keyword in content for keyword in indian_keywords)
+
 def fetch_rss_jobs(feed_url, source_name):
     print(f"Fetching jobs from {source_name} RSS feed...")
     try:
@@ -26,10 +35,11 @@ def fetch_rss_jobs(feed_url, source_name):
                 company = parts[1].split(" (")[0]
                 
             if title and link:
-                add_global_job(title=title, url=link, company=company, snippet=description[:500], source=source_name)
-                count += 1
+                if is_indian_job(title, company, description):
+                    add_global_job(title=title, url=link, company=company, snippet=description[:500], source=source_name)
+                    count += 1
                 
-        print(f"Successfully ingested {count} jobs from {source_name}")
+        print(f"Successfully ingested {count} Indian jobs from {source_name}")
     except Exception as e:
         print(f"Error fetching {source_name}: {e}")
 
@@ -48,10 +58,11 @@ def fetch_arbeitnow_jobs():
             description = job.get('description', '')
             
             if title and link:
-                add_global_job(title=title, url=link, company=company, snippet=description[:500], source="Arbeitnow")
-                count += 1
+                if is_indian_job(title, company, description):
+                    add_global_job(title=title, url=link, company=company, snippet=description[:500], source="Arbeitnow")
+                    count += 1
                 
-        print(f"Successfully ingested {count} jobs from Arbeitnow")
+        print(f"Successfully ingested {count} Indian jobs from Arbeitnow")
     except Exception as e:
         print(f"Error fetching Arbeitnow: {e}")
 
@@ -87,13 +98,14 @@ def fetch_hn_jobs():
                     company = title.split(" (")[0]
                     
                 if title:
-                    add_global_job(title=title, url=link, company=company, snippet=text[:500], source="Hacker News")
-                    count += 1
+                    if is_indian_job(title, company, text):
+                        add_global_job(title=title, url=link, company=company, snippet=text[:500], source="Hacker News")
+                        count += 1
                 time.sleep(0.5) # Polite delay for HN API
             except:
                 pass
                 
-        print(f"Successfully ingested {count} jobs from Hacker News")
+        print(f"Successfully ingested {count} Indian jobs from Hacker News")
     except Exception as e:
         print(f"Error fetching Hacker News: {e}")
 
