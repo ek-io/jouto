@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import sys
 import os
+import io
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from core.database import get_global_jobs, get_connection
@@ -14,7 +15,6 @@ if "user_id" not in st.session_state or st.session_state.user_id is None:
     st.warning("Please log in on the Dashboard first.")
     st.stop()
 
-# Replace this with your actual admin username(s)
 ADMIN_USERNAMES = ["admin", "ek-io", "owner"]
 
 if st.session_state.username.lower() not in ADMIN_USERNAMES:
@@ -40,7 +40,8 @@ def fetch_admin_job_stats():
     c.execute("SELECT COUNT(*) FROM jobs")
     total_jobs = c.fetchone()[0]
     
-    c.execute("SELECT title, company, source, discovered_date, url FROM jobs ORDER BY discovered_date DESC LIMIT 1000")
+    # Fetch all columns including snippet for filtering
+    c.execute("SELECT title, company, url, snippet, source, discovered_date FROM jobs ORDER BY discovered_date DESC LIMIT 5000")
     recent_jobs = [dict(row) for row in c.fetchall()]
     
     conn.close()
@@ -63,18 +64,59 @@ if jobs_data:
     m3.metric("Most Active Hiring Company", top_company)
 
     st.divider()
-
-    st.subheader("Raw Crawler Data (Latest 1000 Jobs)")
     
-    # Filter by source
-    unique_sources = ["All"] + list(df['source'].unique())
-    selected_source = st.selectbox("Filter by Crawler Source:", unique_sources)
+    # --- FILTERS ---
+    st.subheader("Data Export & Filtering")
     
-    if selected_source != "All":
-        df = df[df['source'] == selected_source]
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        unique_sources = ["All"] + list(df['source'].unique())
+        selected_source = st.selectbox("Filter by Source:", unique_sources)
+    with c2:
+        company_filter = st.text_input("Filter by Company:", placeholder="e.g. Google")
+    with c3:
+        keyword_filter = st.text_input("Deep Keyword Search (State/Salary/Requirements):", placeholder="e.g. California, $120k, Python")
         
+    # Apply Filters
+    filtered_df = df.copy()
+    if selected_source != "All":
+        filtered_df = filtered_df[filtered_df['source'] == selected_source]
+    if company_filter:
+        filtered_df = filtered_df[filtered_df['company'].str.contains(company_filter, case=False, na=False)]
+    if keyword_filter:
+        # Search across title and snippet
+        mask = filtered_df['title'].str.contains(keyword_filter, case=False, na=False) | \
+               filtered_df['snippet'].str.contains(keyword_filter, case=False, na=False)
+        filtered_df = filtered_df[mask]
+        
+    # --- EXCEL EXPORT ---
+    def convert_df_to_excel(df_to_export):
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_to_export.to_excel(writer, index=False, sheet_name='Jouto_Jobs')
+        return output.getvalue()
+
+    st.write(f"Showing **{len(filtered_df)}** matching jobs.")
+    
+    excel_data = convert_df_to_excel(filtered_df)
+    st.download_button(
+        label="📥 Export Current View to Excel (.xlsx)",
+        data=excel_data,
+        file_name="Jouto_Crawler_Data.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        type="primary"
+    )
+    
+    st.divider()
+
+    # --- DATAFRAME VIEW ---
+    st.subheader("Raw Crawler Data")
+    
+    # Drop snippet from UI for cleaner view
+    display_df = filtered_df.drop(columns=['snippet'])
+    
     st.dataframe(
-        df,
+        display_df,
         column_config={
             "url": st.column_config.LinkColumn("Application Link"),
             "discovered_date": st.column_config.DatetimeColumn("Crawled At", format="D MMM YYYY, h:mm a")
