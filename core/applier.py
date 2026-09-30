@@ -63,6 +63,8 @@ def apply_to_job(job_url, user_profile, bulk_mode=False):
                 # try: page.click("button[type='submit']") except: pass
                 # For safety in this demo, we just wait a second
                 time.sleep(1)
+            
+            return True
                 
         except Exception as e:
             print(f"Failed to apply to {job_url}: {e}")

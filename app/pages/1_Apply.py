@@ -3,7 +3,7 @@ import os
 import sys
 import time
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from core.database import get_user_profile, search_global_jobs, save_user_job, update_user_job_status
 from core.evaluator import evaluate_job
@@ -25,8 +25,8 @@ if "user_id" not in st.session_state or st.session_state.user_id is None:
 
 st.title("🚀 1-Click Magic Apply")
 
-user_profile = get_user_profile(st.session_state.user_id)
-if not user_profile or not user_profile.get("resume_data"):
+user_profile, resume_name, resume_file = get_user_profile(st.session_state.user_id)
+if not user_profile or not resume_file:
     st.warning("⚠️ Your profile or resume is missing. We need your details before we can auto-apply.")
     if st.button("Go to Profile Settings"):
         st.switch_page("pages/2_Profile.py")
@@ -81,7 +81,9 @@ if st.button("START ENGINE", type="primary", use_container_width=True):
             status_text.text(f"Applying: {job['title']} at {job['company']} (Score: {score}%)")
             
             # Trigger Playwright Engine
-            success = apply_to_job(job['url'], user_profile)
+            user_profile['resume_file'] = resume_file
+            user_profile['resume_name'] = resume_name
+            success = apply_to_job(job['url'], user_profile, bulk_mode=True)
             
             if success:
                 update_user_job_status(user_job_id, "Applied")
