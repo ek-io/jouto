@@ -7,13 +7,12 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.database import initialize_db, verify_user, create_user, get_user_applications
-from app.components.navbar import render_navbar
 
 st.set_page_config(
     page_title="Jouto | Dashboard",
     page_icon="💼",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # Initialize database
@@ -60,7 +59,6 @@ if st.session_state.user_id is None:
     st.stop() # Halt rendering until logged in
 
 # --- AUTHENTICATED DASHBOARD ---
-render_navbar()
 
 c1, c2 = st.columns([4, 1])
 with c1:
@@ -73,12 +71,20 @@ with c2:
 # --- HERO SECTION ---
 st.markdown("""
 <div style="padding: 1rem 0; text-align: center;">
-    <h1 style="color: #2557a7; font-size: 2.8rem; font-weight: 800; margin-bottom: 0;">Job Application Command Center</h1>
+    <h1 style="color: #2557a7; font-size: 2.8rem; font-weight: 800; margin-bottom: 0;">1-Click Magic Apply</h1>
     <p style="color: #595959; font-size: 1.2rem; max-width: 600px; margin: 10px auto 30px auto;">
-        Automate your job search, evaluate fit scores with AI, and track your pipeline all in one place.
+        Enter your target role and let our AI engine automatically evaluate, rank, and apply to hundreds of matching roles for you.
     </p>
 </div>
 """, unsafe_allow_html=True)
+
+# BIG APPLY BUTTON
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    if st.button("🚀 START BULK APPLY", use_container_width=True, type="primary"):
+        st.switch_page("pages/1_Apply.py")
+
+st.divider()
 
 # --- METRICS DASHBOARD ---
 st.write("### 📈 Pipeline Overview")
@@ -88,7 +94,6 @@ total_saved = len([a for a in apps if a['status'] == 'Saved'])
 total_applied = len([a for a in apps if a['status'] == 'Applied'])
 total_interviews = len([a for a in apps if a['status'] == 'Interviewing'])
 
-# Calculate average fit score safely
 scores = [a['fit_score'] for a in apps if a.get('fit_score')]
 avg_score = int(sum(scores)/len(scores)) if scores else 0
 
@@ -104,7 +109,7 @@ st.divider()
 st.write("### 🕒 Recent Activity")
 
 if not apps:
-    st.info("Your pipeline is empty. Head over to the **Discovery** tab to find new roles!")
+    st.info("Your pipeline is empty. Click START BULK APPLY to begin!")
 else:
     recent_apps = apps[:5]
     df = pd.DataFrame(recent_apps)
@@ -113,4 +118,3 @@ else:
     display_df.columns = ['Job Title', 'Company', 'Status', 'Fit Score']
     
     st.dataframe(display_df, use_container_width=True, hide_index=True)
-

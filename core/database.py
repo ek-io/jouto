@@ -128,19 +128,31 @@ def get_global_jobs(limit=100):
     conn.close()
     return jobs
 
-def save_job_for_user(user_id, job_id, fit_score=0, reasoning=""):
+def search_global_jobs(role, limit=50):
+    conn = get_connection()
+    c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    search_pattern = f"%{role}%"
+    c.execute("SELECT * FROM jobs WHERE title ILIKE %s OR snippet ILIKE %s ORDER BY discovered_date DESC LIMIT %s", (search_pattern, search_pattern, limit))
+    jobs = [dict(row) for row in c.fetchall()]
+    conn.close()
+    return jobs
+
+def save_user_job(user_id, job_id, fit_score=0, status="Saved"):
     conn = get_connection()
     c = conn.cursor()
     try:
-        c.execute('''INSERT INTO user_jobs (user_id, job_id, status, fit_score, reasoning) 
-                     VALUES (%s, %s, 'Saved', %s, %s)''', (user_id, job_id, fit_score, reasoning))
+        c.execute('''INSERT INTO user_jobs (user_id, job_id, status, fit_score) 
+                     VALUES (%s, %s, %s, %s) RETURNING id''', (user_id, job_id, status, fit_score))
+        uj_id = c.fetchone()[0]
         conn.commit()
+        return uj_id
     except psycopg2.IntegrityError:
         conn.rollback()
-        # Update if already exists
-        c.execute("UPDATE user_jobs SET fit_score = %s, reasoning = %s WHERE user_id = %s AND job_id = %s", 
-                  (fit_score, reasoning, user_id, job_id))
+        c.execute("UPDATE user_jobs SET fit_score = %s, status = %s WHERE user_id = %s AND job_id = %s RETURNING id", 
+                  (fit_score, status, user_id, job_id))
+        uj_id = c.fetchone()[0]
         conn.commit()
+        return uj_id
     finally:
         conn.close()
 
