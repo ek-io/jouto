@@ -4,15 +4,26 @@ import hashlib
 import psycopg2
 import psycopg2.extras
 
+from psycopg2 import pool
+
+DB_POOL = None
+
 def get_connection():
+    global DB_POOL
     db_url = os.environ.get("DATABASE_URL")
     if not db_url:
         print("WARNING: DATABASE_URL not set!")
-        # Fallback for local testing if needed, though it will crash without DB
         return None
     
-    conn = psycopg2.connect(db_url)
-    return conn
+    if DB_POOL is None:
+        DB_POOL = psycopg2.pool.ThreadedConnectionPool(1, 20, db_url)
+    
+    return DB_POOL.getconn()
+
+def release_connection(conn):
+    global DB_POOL
+    if DB_POOL and conn:
+        DB_POOL.putconn(conn)
 
 def initialize_db():
     conn = get_connection()
@@ -57,7 +68,7 @@ def initialize_db():
         )
     ''')
     conn.commit()
-    conn.close()
+    release_connection(conn)
 
 # --- USER AUTHENTICATION ---
 def hash_password(password):
@@ -75,14 +86,14 @@ def create_user(username, password):
         conn.rollback()
         return False
     finally:
-        conn.close()
+        release_connection(conn)
 
 def verify_user(username, password):
     conn = get_connection()
     c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     c.execute("SELECT id FROM users WHERE username = %s AND password_hash = %s", (username, hash_password(password)))
     user = c.fetchone()
-    conn.close()
+    release_connection(conn)
     return user['id'] if user else None
 
 def get_user_profile(user_id):
@@ -90,7 +101,7 @@ def get_user_profile(user_id):
     c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     c.execute("SELECT profile_data, resume_name, resume_file FROM users WHERE id = %s", (user_id,))
     row = c.fetchone()
-    conn.close()
+    release_connection(conn)
     if row:
         return json.loads(row['profile_data'] or "{}"), row['resume_name'], row['resume_file']
     return {}, None, None
@@ -104,7 +115,7 @@ def update_user_profile(user_id, profile_data, resume_name=None, resume_bytes=No
     else:
         c.execute("UPDATE users SET profile_data = %s WHERE id = %s", (json.dumps(profile_data), user_id))
     conn.commit()
-    conn.close()
+    release_connection(conn)
 
 # --- JOB MANAGEMENT ---
 def add_global_job(title, url, company="Unknown", snippet="", source="Manual"):
@@ -118,14 +129,14 @@ def add_global_job(title, url, company="Unknown", snippet="", source="Manual"):
         conn.rollback()
         pass # Job already exists
     finally:
-        conn.close()
+        release_connection(conn)
 
 def get_global_jobs(limit=100):
     conn = get_connection()
     c = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     c.execute("SELECT * FROM jobs ORDER BY discovered_date DESC LIMIT %s", (limit,))
     jobs = [dict(row) for row in c.fetchall()]
-    conn.close()
+    release_connection(conn)
     return jobs
 
 def search_global_jobs(role, limit=50):
@@ -134,7 +145,7 @@ def search_global_jobs(role, limit=50):
     search_pattern = f"%{role}%"
     c.execute("SELECT * FROM jobs WHERE title ILIKE %s OR snippet ILIKE %s ORDER BY discovered_date DESC LIMIT %s", (search_pattern, search_pattern, limit))
     jobs = [dict(row) for row in c.fetchall()]
-    conn.close()
+    release_connection(conn)
     return jobs
 
 def save_user_job(user_id, job_id, fit_score=0, status="Saved"):
@@ -154,7 +165,7 @@ def save_user_job(user_id, job_id, fit_score=0, status="Saved"):
         conn.commit()
         return uj_id
     finally:
-        conn.close()
+        release_connection(conn)
 
 def get_user_applications(user_id):
     conn = get_connection()
@@ -167,7 +178,7 @@ def get_user_applications(user_id):
         ORDER BY uj.id DESC
     ''', (user_id,))
     apps = [dict(row) for row in c.fetchall()]
-    conn.close()
+    release_connection(conn)
     return apps
 
 def update_user_job_status(uj_id, status):
@@ -178,4 +189,4 @@ def update_user_job_status(uj_id, status):
     else:
         c.execute("UPDATE user_jobs SET status = %s WHERE id = %s", (status, uj_id))
     conn.commit()
-    conn.close()
+    release_connection(conn)

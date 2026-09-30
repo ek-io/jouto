@@ -16,8 +16,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialize database
-initialize_db()
+@st.cache_resource
+def run_init_db():
+    initialize_db()
+
+run_init_db()
 
 # Load Custom CSS
 def load_css():
