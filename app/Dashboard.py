@@ -60,7 +60,7 @@ if st.session_state.user_id is None:
     """, unsafe_allow_html=True)
     
     st.markdown("<h1 style='text-align: center; color: #2557a7;'>Jouto</h1>", unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center;'>Your Job Search, Automated.</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center;'>Your Job Search Automated.</h3>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
