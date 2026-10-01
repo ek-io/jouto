@@ -75,26 +75,23 @@ if st.button("START ENGINE", type="primary", use_container_width=True):
         fit_result = evaluate_job(job['snippet'], job['title'], user_profile)
         score = fit_result.get('score', 0)
         
-        if score >= 75:
-            # Good fit! Save it and apply
-            user_job_id = save_user_job(st.session_state.user_id, job['id'], score, "Auto-Applying")
-            
-            status_text.text(f"Applying: {job['title']} at {job['company']} (Score: {score}%)")
-            
-            # Trigger Playwright Engine
-            user_profile['resume_file'] = resume_file
-            user_profile['resume_name'] = resume_name
-            success = apply_to_job(job['url'], user_profile, bulk_mode=True)
-            
-            if success:
-                update_user_job_status(user_job_id, "Applied")
-                successful_applications += 1
-                st.write(f"✅ **Applied!** {job['title']} at {job['company']} (AI Score: {score}%)")
-            else:
-                update_user_job_status(user_job_id, "Failed")
-                st.write(f"❌ **Failed:** Could not parse form for {job['title']} at {job['company']}")
+        # Apply regardless of score based on user request
+        user_job_id = save_user_job(st.session_state.user_id, job['id'], score, "Auto-Applying")
+        
+        status_text.text(f"Applying: {job['title']} at {job['company']} (Score: {score}%)")
+        
+        # Trigger Playwright Engine
+        user_profile['resume_file'] = resume_file
+        user_profile['resume_name'] = resume_name
+        success = apply_to_job(job['url'], user_profile, bulk_mode=True)
+        
+        if success:
+            update_user_job_status(user_job_id, "Applied")
+            successful_applications += 1
+            st.write(f"✅ **Applied!** {job['title']} at {job['company']} (AI Score: {score}%)")
         else:
-            st.write(f"⏭️ Skipped: {job['title']} at {job['company']} (AI Score: {score}%) - Too low.")
+            update_user_job_status(user_job_id, "Failed")
+            st.write(f"❌ **Failed:** Could not parse form for {job['title']} at {job['company']}")
             
     progress_bar.progress(1.0)
     status_text.text("Bulk Application Complete!")
