@@ -21,6 +21,12 @@ def load_css():
 load_css()
 
 if "user_id" not in st.session_state or st.session_state.user_id is None:
+        st.markdown('''
+        <style>
+            [data-testid="stSidebar"] { display: none; }
+            [data-testid="collapsedControl"] { display: none; }
+        </style>
+    ''', unsafe_allow_html=True)
     st.error("Please log in from the Dashboard first.")
     st.stop()
 

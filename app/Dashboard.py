@@ -52,6 +52,13 @@ if stored_uid and stored_uname and st.session_state.user_id is None:
     st.rerun()
 
 if st.session_state.user_id is None:
+    st.markdown("""
+        <style>
+            [data-testid="stSidebar"] { display: none; }
+            [data-testid="collapsedControl"] { display: none; }
+        </style>
+    """, unsafe_allow_html=True)
+    
     st.markdown("<h1 style='text-align: center; color: #2557a7;'>Jouto</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center;'>Your Job Search, Automated.</h3>", unsafe_allow_html=True)
     

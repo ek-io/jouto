@@ -10,6 +10,12 @@ from core.database import get_user_profile, update_user_profile
 st.set_page_config(page_title="Jouto | Profile", page_icon=Image.open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if 'pages' in __file__ else os.path.dirname(os.path.abspath(__file__)), 'assets', 'logo.jpg')), layout="wide", initial_sidebar_state="expanded")
 
 if "user_id" not in st.session_state or st.session_state.user_id is None:
+        st.markdown('''
+        <style>
+            [data-testid="stSidebar"] { display: none; }
+            [data-testid="collapsedControl"] { display: none; }
+        </style>
+    ''', unsafe_allow_html=True)
     st.warning("Please log in on the Dashboard first.")
     st.stop()
 
