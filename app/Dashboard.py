@@ -92,7 +92,7 @@ if st.session_state.user_id is None:
 
 c1, c2 = st.columns([4, 1])
 with c1:
-    st.write(f"### Welcome back, {st.session_state.username}!")
+    pass
 with c2:
     if st.button("Log Out", use_container_width=True):
         st.session_state.user_id = None
